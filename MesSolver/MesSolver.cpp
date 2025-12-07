@@ -1,36 +1,75 @@
 #include "MesSolver.h"
 #include "Helpers.h"
 
+#include <algorithm>
+#include <iomanip>
+#include <sstream>
+#include <fstream>
+#include <iostream>
+
+#pragma region static Funtions
+static void GetGaussValues(int n, std::vector<double>& m_gaussValues, std::vector<double>& weights)
+{
+    m_gaussValues.clear();
+    weights.clear();
+
+    switch (n)
+    {
+    case 1:
+        m_gaussValues = { 0.0 };
+        weights = { 2.0 };
+        break;
+    case 2:
+        m_gaussValues = { -sqrt(1.0 / 3.0), sqrt(1.0 / 3.0) };
+        weights = { 1.0, 1.0 };
+        break;
+    case 3:
+        m_gaussValues = { -sqrt(3.0 / 5.0), 0.0, sqrt(3.0 / 5.0) };
+        weights = { 5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0 };
+        break;
+    case 4:
+        m_gaussValues = { -sqrt(3.0 / 7.0 + 2.0 / 7.0 * sqrt(6.0 / 5.0)), -sqrt(3.0 / 7.0 - 2.0 / 7.0 * sqrt(6.0 / 5.0)), sqrt(3.0 / 7.0 - 2.0 / 7.0 * sqrt(6.0 / 5.0)), sqrt(3.0 / 7.0 + 2.0 / 7.0 * sqrt(6.0 / 5.0)) };
+        weights = { (18.0 - sqrt(30.0)) / 36.0, (18.0 + sqrt(30.0)) / 36.0, (18.0 + sqrt(30.0)) / 36.0, (18.0 - sqrt(30.0)) / 36.0 };
+        break;
+    case 5:
+        m_gaussValues = { -1.0 / 3.0 * sqrt(5.0 + 2 * sqrt(10.0 / 7.0)), -1.0 / 3.0 * sqrt(5.0 - 2 * sqrt(10.0 / 7.0)), 0.0, 1.0 / 3.0 * sqrt(5.0 - 2 * sqrt(10.0 / 7.0)), 1.0 / 3.0 * sqrt(5.0 + 2 * sqrt(10.0 / 7.0)) };
+        weights = { (322.0 - 13.0 * sqrt(70.0)) / 900.0, (322.0 + 13.0 * sqrt(70.0)) / 900.0, 128.0 / 225.0, (322.0 + 13.0 * sqrt(70.0)) / 900.0, (322.0 - 13.0 * sqrt(70.0)) / 900.0 };
+        break;
+    default:
+        return;
+    }
+}
+
 static double shapeFunctionDer_Ksi(int index, double eta)
 {
     switch (index)
     {
         // 0 - N1, 1 - N2, 2 - N3, 3 - N4
-    case 0:
-    {
-        return -0.25 * (1 - eta);
-        break;
-    }
-    case 1:
-    {
-        return 0.25 * (1 - eta);
-        break;
-    }
-    case 2:
-    {
-        return 0.25 * (1 + eta);
-        break;
-    }
-    case 3:
-    {
-        return -0.25 * (1 + eta);
-        break;
-    }
-    default:
-    {
-        return 0.0;
-        break;
-    }
+        case 0:
+        {
+            return -0.25 * (1 - eta);
+            break;
+        }
+        case 1:
+        {
+            return 0.25 * (1 - eta);
+            break;
+        }
+        case 2:
+        {
+            return 0.25 * (1 + eta);
+            break;
+        }
+        case 3:
+        {
+            return -0.25 * (1 + eta);
+            break;
+        }
+        default:
+        {
+            return 0.0;
+            break;
+        }
     }
 }
 
@@ -39,31 +78,31 @@ static double shapeFunctionDer_Eta(int index, double ksi)
     switch (index)
     {
         // 0 - N1, 1 - N2, 2 - N3, 3 - N4
-    case 0:
-    {
-        return -0.25 * (1 - ksi);
-        break;
-    }
-    case 1:
-    {
-        return -0.25 * (1 + ksi);
-        break;
-    }
-    case 2:
-    {
-        return 0.25 * (1 + ksi);
-        break;
-    }
-    case 3:
-    {
-        return 0.25 * (1 - ksi);
-        break;
-    }
-    default:
-    {
-        return 0.0;
-        break;
-    }
+        case 0:
+        {
+            return -0.25 * (1 - ksi);
+            break;
+        }
+        case 1:
+        {
+            return -0.25 * (1 + ksi);
+            break;
+        }
+        case 2:
+        {
+            return 0.25 * (1 + ksi);
+            break;
+        }
+        case 3:
+        {
+            return 0.25 * (1 - ksi);
+            break;
+        }
+        default:
+        {
+            return 0.0;
+            break;
+        }
     }
 }
 
@@ -72,31 +111,31 @@ static double shapeFunction(int index, double ksi, double eta)
     switch (index)
     {
         // 0 - N1, 1 - N2, 2 - N3, 3 - N4
-    case 0:
-    {
-        return 0.25 * (1 - ksi) * (1 - eta);
-        break;
-    }
-    case 1:
-    {
-        return 0.25 * (1 + ksi) * (1 - eta);
-        break;
-    }
-    case 2:
-    {
-        return 0.25 * (1 + ksi) * (1 + eta);
-        break;
-    }
-    case 3:
-    {
-        return 0.25 * (1 - ksi) * (1 + eta);
-        break;
-    }
-    default:
-    {
-        return 0.0;
-        break;
-    }
+        case 0:
+        {
+            return 0.25 * (1 - ksi) * (1 - eta);
+            break;
+        }
+        case 1:
+        {
+            return 0.25 * (1 + ksi) * (1 - eta);
+            break;
+        }
+        case 2:
+        {
+            return 0.25 * (1 + ksi) * (1 + eta);
+            break;
+        }
+        case 3:
+        {
+            return 0.25 * (1 - ksi) * (1 + eta);
+            break;
+        }
+        default:
+        {
+            return 0.0;
+            break;
+        }
     }
 }
 
@@ -128,11 +167,7 @@ static void printVector(const std::vector<double> vector)
         std::cout << std::setw(12) << std::fixed << std::setprecision(6) << vector.at(i) << " ";
     std::cout << "\n";
 }
-
-Node::Node(double argX, double argY)
-    : x(argX), y(argY)
-{
-}
+#pragma endregion
 
 void Jacobian::CalculateValue(const UniversalElement& universalElement, int i, int* nodesIds, std::vector<Node>& nodes)
 {
@@ -287,9 +322,40 @@ void Element::PrintJacobians() const
     }
 }
 
-MesSolver::MesSolver()
+MesSolver::MesSolver(const std::string& strFileName, int nGaussPointsNumber)
 {
+	LoadData(strFileName);
 
+    m_globalH.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
+
+    for (auto& index : m_boundaryConditions)
+        m_nodes.at(index).bBoundaryCondition = true;
+
+    m_globalP.resize(m_nodes.size(), 0.0);
+
+    m_nodesTemperatures.resize(m_nodes.size(), 0.0);
+
+    m_globalC.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
+
+	GetGaussValues(nGaussPointsNumber, m_gaussValues, m_gaussWeights);
+
+    for (double ksi : m_gaussValues)
+        for (double eta : m_gaussValues)
+            m_gaussNodes.push_back({ ksi, eta });
+
+    for (double value : m_gaussValues)
+        m_gaussBoundryNodes.push_back({ value, -1.0 });
+
+    for (double value : m_gaussValues)
+        m_gaussBoundryNodes.push_back({ 1.0, value });
+
+    for (double value : m_gaussValues)
+        m_gaussBoundryNodes.push_back({ value, 1.0 });
+
+    for (double value : m_gaussValues)
+        m_gaussBoundryNodes.push_back({ -1.0, value });
+
+    m_universalElement = UniversalElement(m_gaussNodes.size());
 }
 
 void MesSolver::LoadData(const std::string& strFileName)
@@ -385,73 +451,12 @@ void MesSolver::LoadData(const std::string& strFileName)
 
     file.close();
 
-    // TO INIT
-    m_globalH.resize(m_nodes.size());
-    for (auto& row : m_globalH)
-        row.resize(m_nodes.size(), 0.0);
-
-    for (int index : m_boundaryConditions)
-        m_nodes.at(index).bBoundaryCondition = true;
-
-    m_globalP.resize(m_nodes.size(), 0.0);
-
-    m_nodesTemperatures.resize(m_nodes.size(), 0.0);
-
-    m_globalC.resize(m_nodes.size());
-    for (auto& row : m_globalC)
-        row.resize(m_nodes.size(), 0.0);
-}
-
-void MesSolver::PrintData()
-{
-    const int precision = 6;
-
-    std::cout.precision(precision);
-
-    std::cout << "Global Data:\n";
-    std::cout << "\tSimulation Time:      " << m_globalData.SimulationTime << " s" << "\n";
-    std::cout << "\tSimulation Step Time: " << m_globalData.SimulationStepTime << " s" << "\n";
-    std::cout << "\tConductivity:         " << m_globalData.Conductivity << "\n";
-    std::cout << "\tAlfa:                 " << m_globalData.Alfa << "\n";
-    std::cout << "\tAmbient Temperature:  " << m_globalData.AmbientTemperature << "\n";
-    std::cout << "\tInitial Temperature:  " << m_globalData.InitialTemp << "\n";
-    std::cout << "\tDensity:              " << m_globalData.Density << "\n";
-    std::cout << "\tSpecificHeat:         " << m_globalData.SpecificHeat << "\n";
-    std::cout << "\tNodes:                " << m_globalData.NodesNumber << '\n';
-    std::cout << "\tElements:             " << m_globalData.ElementsNumber << "\n";
-
-    std::cout << "\nNodes:\n";
-    for (size_t i = 0; i < m_nodes.size(); ++i)
-    {
-        std::cout << std::left << "\tID: " << std::setw(2) << i << std::fixed << std::right <<
-            ", x: " << std::setprecision(precision) << std::setw(precision + 3) << m_nodes.at(i).x <<
-            ", y: " << std::setprecision(precision) << std::setw(precision + 3) << m_nodes.at(i).y << "\n";
-    }
-
-    std::cout << "\nElements:\n";
-    for (size_t i = 0; i < m_elements.size(); ++i)
-    {
-        const auto& el = m_elements[i];
-        std::cout << std::left << "\tID: " << std::setw(2) << i << ", Nodes: ";
-        for (int nid : el.nodesIds)
-        {
-            std::cout << std::setw(2) << nid << " ";
-        }
-        std::cout << "\n";
-    }
-
-
-    std::cout << "\nBoundary conditions:\n\t";
-    for (int b : m_boundaryConditions)
-    {
-        std::cout << b << " ";
-    }
-    std::cout << "\n";
+    PrintData();
 }
 
 void MesSolver::CalculateDeritatives()
 {
-    const double a = 1.0 / std::sqrt(3.0);
+    /*const double a = 1.0 / std::sqrt(3.0);
     std::vector<std::pair<double, double>> gaussPoints =
     {
         { -a, -a },
@@ -464,42 +469,18 @@ void MesSolver::CalculateDeritatives()
     {
         for (int j = 0; j < ElementPoints; ++j)
         {
-            universalElement.dN_dKsi[i][j] = shapeFunctionDer_Ksi(j, gaussPoints.at(i).second);
-			universalElement.dN_dEta[i][j] = shapeFunctionDer_Eta(j, gaussPoints.at(i).first);
+            m_universalElement.dN_dKsi[i][j] = shapeFunctionDer_Ksi(j, gaussPoints.at(i).second);
+			m_universalElement.dN_dEta[i][j] = shapeFunctionDer_Eta(j, gaussPoints.at(i).first);
         }
-	}
-}
+	}*/
 
-void MesSolver::PrintDerivatives() const
-{
-    std::vector<double> gaussNodes = { -sqrt(1.0 / 3.0), sqrt(1.0 / 3.0) };
-
-    std::cout << "Shape Functions Derivatives at Integration Points:\n";
-    std::cout << "dN/dKsi" << '\n';
-    for (int i = 0; i < ElementPoints; ++i)
+    for (int i = 0; i < m_gaussNodes.size(); ++i)
     {
-        std::cout << universalElement.dN_dKsi[i][0] << " ";
-        std::cout << universalElement.dN_dKsi[i][1] << " ";
-        std::cout << universalElement.dN_dKsi[i][2] << " ";
-        std::cout << universalElement.dN_dKsi[i][3] << '\n';
-    }
-
-    std::cout << "dN/dEta" << '\n';
-    for (int i = 0; i < ElementPoints; ++i)
-    {
-        std::cout << universalElement.dN_dEta[i][0] << " ";
-        std::cout << universalElement.dN_dEta[i][1] << " ";
-        std::cout << universalElement.dN_dEta[i][2] << " ";
-        std::cout << universalElement.dN_dEta[i][3] << '\n';
-    }
-}
-
-void MesSolver::PrintJacobiansForElements()
-{
-    for (const auto& element : m_elements)
-    {
-        element.PrintJacobians();
-        std::cout << "\n";
+        for (int j = 0; j < ElementPoints; ++j)
+        {
+            m_universalElement.dN_dKsi.at(i).at(j) = shapeFunctionDer_Ksi(j, m_gaussNodes.at(i).second);
+            m_universalElement.dN_dEta.at(i).at(j) = shapeFunctionDer_Eta(j, m_gaussNodes.at(i).first);
+        }
     }
 }
 
@@ -510,7 +491,7 @@ void MesSolver::CalculateSolution()
 
     for (auto& element : m_elements)
     {
-        element.CalculateJacobians(m_nodes, universalElement);
+        element.CalculateJacobians(m_nodes, m_universalElement);
         element.CalculateMatrixH(m_globalData.Conductivity);
         element.CalculateBoundryConditionsH(m_nodes, m_globalData.Alfa, m_globalData.AmbientTemperature);
 		element.CalculateMatrixC(m_globalData.SpecificHeat, m_globalData.Density);
@@ -518,7 +499,6 @@ void MesSolver::CalculateSolution()
 
     //PrintJacobiansForElements();
 
-    // Calculate Globals
     for (auto& element : m_elements)
     {
         for (int i = 0; i < ElementPoints; ++i)
@@ -569,34 +549,83 @@ void MesSolver::StartTimeSimulation()
     }
 }
 
-//static void GetGaussValues(int n, std::vector<double>& nodes, std::vector<double>& weights)
-//{
-//    nodes.clear();
-//    weights.clear();
-//
-//    switch (n)
-//    {
-//    case 1:
-//        nodes = { 0.0 };
-//        weights = { 2.0 };
-//        break;
-//    case 2:
-//        nodes = { -sqrt(1.0 / 3.0), sqrt(1.0 / 3.0) };
-//        weights = { 1.0, 1.0 };
-//        break;
-//    case 3:
-//        nodes = { -sqrt(3.0 / 5.0), 0.0, sqrt(3.0 / 5.0) };
-//        weights = { 5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0 };
-//        break;
-//    case 4:
-//        nodes = { -sqrt(3.0 / 7.0 + 2.0 / 7.0 * sqrt(6.0 / 5.0)), -sqrt(3.0 / 7.0 - 2.0 / 7.0 * sqrt(6.0 / 5.0)), sqrt(3.0 / 7.0 - 2.0 / 7.0 * sqrt(6.0 / 5.0)), sqrt(3.0 / 7.0 + 2.0 / 7.0 * sqrt(6.0 / 5.0)) };
-//        weights = { (18.0 - sqrt(30.0)) / 36.0, (18.0 + sqrt(30.0)) / 36.0, (18.0 + sqrt(30.0)) / 36.0, (18.0 - sqrt(30.0)) / 36.0 };
-//        break;
-//    case 5:
-//        nodes = { -1.0 / 3.0 * sqrt(5.0 + 2 * sqrt(10.0 / 7.0)), -1.0 / 3.0 * sqrt(5.0 - 2 * sqrt(10.0 / 7.0)), 0.0, 1.0 / 3.0 * sqrt(5.0 - 2 * sqrt(10.0 / 7.0)), 1.0 / 3.0 * sqrt(5.0 + 2 * sqrt(10.0 / 7.0)) };
-//        weights = { (322.0 - 13.0 * sqrt(70.0)) / 900.0, (322.0 + 13.0 * sqrt(70.0)) / 900.0, 128.0 / 225.0, (322.0 + 13.0 * sqrt(70.0)) / 900.0, (322.0 - 13.0 * sqrt(70.0)) / 900.0 };
-//        break;
-//    default:
-//        return;
-//    }
-//}
+#pragma region PrintFunctions
+void MesSolver::PrintData()
+{
+    const int precision = 6;
+
+    std::cout.precision(precision);
+
+    std::cout << "Global Data:\n";
+    std::cout << "\tSimulation Time:      " << m_globalData.SimulationTime << " s" << "\n";
+    std::cout << "\tSimulation Step Time: " << m_globalData.SimulationStepTime << " s" << "\n";
+    std::cout << "\tConductivity:         " << m_globalData.Conductivity << "\n";
+    std::cout << "\tAlfa:                 " << m_globalData.Alfa << "\n";
+    std::cout << "\tAmbient Temperature:  " << m_globalData.AmbientTemperature << "\n";
+    std::cout << "\tInitial Temperature:  " << m_globalData.InitialTemp << "\n";
+    std::cout << "\tDensity:              " << m_globalData.Density << "\n";
+    std::cout << "\tSpecificHeat:         " << m_globalData.SpecificHeat << "\n";
+    std::cout << "\tNodes:                " << m_globalData.NodesNumber << '\n';
+    std::cout << "\tElements:             " << m_globalData.ElementsNumber << "\n";
+
+    std::cout << "\nNodes:\n";
+    for (size_t i = 0; i < m_nodes.size(); ++i)
+    {
+        std::cout << std::left << "\tID: " << std::setw(2) << i << std::fixed << std::right <<
+            ", x: " << std::setprecision(precision) << std::setw(precision + 3) << m_nodes.at(i).x <<
+            ", y: " << std::setprecision(precision) << std::setw(precision + 3) << m_nodes.at(i).y << "\n";
+    }
+
+    std::cout << "\nElements:\n";
+    for (size_t i = 0; i < m_elements.size(); ++i)
+    {
+        const auto& el = m_elements[i];
+        std::cout << std::left << "\tID: " << std::setw(2) << i << ", Nodes: ";
+        for (int nid : el.nodesIds)
+        {
+            std::cout << std::setw(2) << nid << " ";
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\nBoundary conditions:\n\t";
+    for (int b : m_boundaryConditions)
+    {
+        std::cout << b << " ";
+    }
+    std::cout << "\n";
+}
+
+void MesSolver::PrintDerivatives() const
+{
+    std::vector<double> gaussNodes = { -sqrt(1.0 / 3.0), sqrt(1.0 / 3.0) };
+
+    std::cout << "Shape Functions Derivatives at Integration Points:\n";
+    std::cout << "dN/dKsi" << '\n';
+    for (int i = 0; i < ElementPoints; ++i)
+    {
+        std::cout << m_universalElement.dN_dKsi[i][0] << " ";
+        std::cout << m_universalElement.dN_dKsi[i][1] << " ";
+        std::cout << m_universalElement.dN_dKsi[i][2] << " ";
+        std::cout << m_universalElement.dN_dKsi[i][3] << '\n';
+    }
+
+    std::cout << "dN/dEta" << '\n';
+    for (int i = 0; i < ElementPoints; ++i)
+    {
+        std::cout << m_universalElement.dN_dEta[i][0] << " ";
+        std::cout << m_universalElement.dN_dEta[i][1] << " ";
+        std::cout << m_universalElement.dN_dEta[i][2] << " ";
+        std::cout << m_universalElement.dN_dEta[i][3] << '\n';
+    }
+}
+
+void MesSolver::PrintJacobiansForElements()
+{
+    for (const auto& element : m_elements)
+    {
+        element.PrintJacobians();
+        std::cout << "\n";
+    }
+}
+#pragma endregion
