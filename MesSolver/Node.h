@@ -8,5 +8,7 @@ public:
 	bool m_bBoundaryCondition = false;
 
 	Node(int id, double x, double y, bool bBoundaryCondition = false);
+
+	static double GetDistance(const Node& first, const Node& second);
 };
 

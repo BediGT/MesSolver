@@ -40,8 +40,9 @@ static void printVector(const std::vector<double> vector)
 #pragma endregion
 
 MesSolver::MesSolver(const std::string& strFileName, int nGaussPoints)
-    : m_nGaussPoints(nGaussPoints)
 {
+    UniversalElement::Init(nGaussPoints);
+
 	LoadData(strFileName);
 
     m_globalH.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
@@ -51,9 +52,9 @@ MesSolver::MesSolver(const std::string& strFileName, int nGaussPoints)
 
     m_globalP.resize(m_nodes.size(), 0.0);
 
-    m_nodesTemperatures.resize(m_nodes.size(), 0.0);
-
     m_globalC.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
+
+    m_nodesTemperatures.resize(m_nodes.size(), 0.0);
 }
 
 void MesSolver::LoadData(const std::string& strFileName)
@@ -154,8 +155,6 @@ void MesSolver::LoadData(const std::string& strFileName)
 
 void MesSolver::CalculateSolution()
 {
-	UniversalElement::Init(m_nGaussPoints);
-
     for (auto& element : m_elements)
     {
         element.CalculateJacobians();
@@ -205,7 +204,9 @@ void MesSolver::StartTimeSimulation()
     for (int i = 0; i < m_globalData.SimulationTime; i += m_globalData.SimulationStepTime)
     {
 		double stepTime = static_cast<double>(m_globalData.SimulationStepTime);
-        std::vector<std::vector<double>> scaledC = MatrixUtils::Scale(m_globalC, 1.0 / stepTime);
+
+		std::vector<std::vector<double>> scaledC = m_globalC;
+        MatrixUtils::Scale(scaledC, 1.0 / stepTime);
             
         initialTemps = SolveLinearSystem(MatrixUtils::Add(m_globalH, scaledC), MatrixUtils::Add(m_globalP, MatrixUtils::Multiply(scaledC, initialTemps)));
 

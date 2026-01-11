@@ -3,44 +3,11 @@
 #include "Jacobian.h"
 #include "Node.h"
 #include "Edge.h"
-#include "Integrater.h"
 #include "Helpers.h"
+#include "ShapeFunctions.h"
 
 #include <iostream>
 #include <iomanip>
-
-static double shapeFunction(int index, double ksi, double eta)
-{
-    switch (index)
-    {
-        // 0 - N1, 1 - N2, 2 - N3, 3 - N4
-        case 0:
-        {
-            return 0.25 * (1 - ksi) * (1 - eta);
-            break;
-        }
-        case 1:
-        {
-            return 0.25 * (1 + ksi) * (1 - eta);
-            break;
-        }
-        case 2:
-        {
-            return 0.25 * (1 + ksi) * (1 + eta);
-            break;
-        }
-        case 3:
-        {
-            return 0.25 * (1 - ksi) * (1 + eta);
-            break;
-        }
-        default:
-        {
-            return 0.0;
-            break;
-        }
-    }
-}
 
 Element::Element(Node* arg1, Node* arg2, Node* arg3, Node* arg4)
 {
@@ -69,28 +36,6 @@ void Element::CalculateJacobians()
 
 void Element::CalculateMatrixH(double conductivity)
 {
-    /*std::vector<double> weights = { 1.0, 1.0 };
-
-    for (int i = 0; i < ELEMENT_POINTS; ++i)
-    {
-        for (int j = 0; j < ELEMENT_POINTS; ++j)
-        {
-            m_matrixH[i][j] =  (m_jacobians[0].m_dN_dx.at(i) * m_jacobians[0].m_dN_dx.at(j) + m_jacobians[0].m_dN_dy[i] * m_jacobians[0].m_dN_dy[j]) *
-                m_jacobians[0].determinant * weights.at(0) * weights.at(0);
-
-            m_matrixH[i][j] += (m_jacobians[1].m_dN_dx.at(i) * m_jacobians[1].m_dN_dx.at(j) + m_jacobians[1].m_dN_dy[i] * m_jacobians[1].m_dN_dy[j]) *
-                m_jacobians[1].determinant * weights.at(1) * weights.at(0);
-
-            m_matrixH[i][j] += (m_jacobians[2].m_dN_dx.at(i) * m_jacobians[2].m_dN_dx.at(j) + m_jacobians[2].m_dN_dy[i] * m_jacobians[2].m_dN_dy[j]) *
-                m_jacobians[2].determinant * weights.at(0) * weights.at(1);
-
-            m_matrixH[i][j] += (m_jacobians[3].m_dN_dx.at(i) * m_jacobians[3].m_dN_dx.at(j) + m_jacobians[3].m_dN_dy[i] * m_jacobians[3].m_dN_dy[j]) * 
-               m_jacobians[3].determinant * weights.at(1) * weights.at(1);
-
-            m_matrixH[i][j] *= conductivity;
-        }
-    }*/
-
     if (auto universalElement = UniversalElement::Get())
     {
         std::vector<double> weights = getGaussWeights(universalElement->GetGaussNumber());

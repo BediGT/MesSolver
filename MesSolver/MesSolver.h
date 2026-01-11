@@ -40,8 +40,6 @@ class MesSolver
     std::vector<double> m_nodesTemperatures{};
     std::vector<std::vector<double>> m_globalC{};
 
-	int m_nGaussPoints = 2;
-
 public:
     MesSolver(const std::string& strFileName, int nGaussPoints);
     void LoadData(const std::string& strFileName);
