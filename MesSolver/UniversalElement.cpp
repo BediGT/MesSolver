@@ -56,7 +56,7 @@ int UniversalElement::GetIntegralPointsNumber() const
 
 void UniversalElement::Print() const
 {
-    std::cout << "Shape Functions Derivatives at Integration Points:\n";
+    std::cout << "\nShape Functions Derivatives at Integration Points:\n";
     std::cout << "dN/dKsi" << '\n';
     for (int i = 0; i < m_nGauss * m_nGauss; ++i)
     {

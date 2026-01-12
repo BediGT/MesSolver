@@ -122,7 +122,7 @@ void MesSolver::LoadData(const std::string& strFileName)
             double x, y;
             char comma;
             iss >> id >> comma >> x >> comma >> y;
-            m_nodes.push_back(Node(id, x, y));
+            m_nodes.emplace_back(id-1, x, y);
             break;
         }
         case eElement:
@@ -130,7 +130,7 @@ void MesSolver::LoadData(const std::string& strFileName)
             int id, n1, n2, n3, n4;
             char comma;
             iss >> id >> comma >> n1 >> comma >> n2 >> comma >> n3 >> comma >> n4;
-            m_elements.push_back(Element(&m_nodes.at(n1 - 1), &m_nodes.at(n2 - 1), &m_nodes.at(n3 - 1), &m_nodes.at(n4 - 1)));
+            m_elements.emplace_back(&m_nodes.at(n1 - 1), &m_nodes.at(n2 - 1), &m_nodes.at(n3 - 1), &m_nodes.at(n4 - 1));
             break;
         }
         case eBoundaryCondition:
@@ -155,15 +155,18 @@ void MesSolver::LoadData(const std::string& strFileName)
 
 void MesSolver::CalculateSolution()
 {
+    if (auto universalElement = UniversalElement::Get())
+        universalElement->Print();
+
     for (auto& element : m_elements)
     {
         element.CalculateJacobians();
         element.CalculateMatrixH(m_globalData.Conductivity);
-        element.CalculateBoundryConditionsH(m_nodes, m_globalData.Alfa, m_globalData.AmbientTemperature);
+        element.CalculateBoundryConditionsH(m_globalData.Alfa, m_globalData.AmbientTemperature);
 		element.CalculateMatrixC(m_globalData.SpecificHeat, m_globalData.Density);
     }
 
-    //PrintJacobiansForElements();
+    PrintJacobiansForElements();
 
     for (auto& element : m_elements)
     {
@@ -171,13 +174,12 @@ void MesSolver::CalculateSolution()
         {
             for (int j = 0; j < ELEMENT_POINTS; ++j)
             {
-                m_globalH.at(element.m_nodes[i]->m_id).at(element.m_nodes[j]->m_id) += element.m_matrixH[i][j];
-                m_globalH.at(element.m_nodes[i]->m_id).at(element.m_nodes[j]->m_id) += element.m_matrixH[i][j];
-                m_globalH.at(element.m_nodes[i]->m_id).at(element.m_nodes[j]->m_id) += element.m_boundryConditionH[i][j];
-                m_globalC.at(element.m_nodes[i]->m_id).at(element.m_nodes[j]->m_id) += element.m_matrixC[i][j];
+                m_globalH.at(element.m_vertices[i]->m_id).at(element.m_vertices[j]->m_id) += element.m_matrixH[i][j];
+                m_globalH.at(element.m_vertices[i]->m_id).at(element.m_vertices[j]->m_id) += element.m_boundryConditionH[i][j];
+                m_globalC.at(element.m_vertices[i]->m_id).at(element.m_vertices[j]->m_id) += element.m_matrixC[i][j];
             }
 
-            m_globalP.at(element.m_nodes[i]->m_id) += element.m_vectorP[i];
+            m_globalP.at(element.m_vertices[i]->m_id) += element.m_vectorP[i];
         }
     }
 
@@ -269,5 +271,6 @@ void MesSolver::PrintJacobiansForElements()
         element.PrintJacobians();
         std::cout << "\n";
     }
+    std::cout << "\n";
 }
 #pragma endregion

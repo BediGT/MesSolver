@@ -9,12 +9,11 @@ class Node;
 class Element
 {
 public:
-    std::vector<Node*> m_nodes{};
-    std::vector<Edge> m_edges{ ELEMENT_POINTS };
+    std::vector<Node*> m_vertices{};
+    std::vector<Edge> m_edges{};
     std::vector<Jacobian> m_jacobians{};
 
     std::vector<std::vector<double>> m_matrixH{};
-    std::vector<std::vector<double>> m_boundryConditionH{};
     std::vector<double> m_vectorP{};
     std::vector<std::vector<double>> m_matrixC{};
 
@@ -22,7 +21,7 @@ public:
 
     void CalculateJacobians();
     void CalculateMatrixH(double conductivity);
-    void CalculateBoundryConditionsH(std::vector<Node>& nodes, double alfa, double ambientTemp);
+    void CalculateBoundryConditionsH(double alfa, double ambientTemp);
     void CalculateMatrixC(double specificHeat, double density);
 
     void PrintIds() const;

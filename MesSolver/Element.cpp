@@ -11,16 +11,15 @@
 
 Element::Element(Node* arg1, Node* arg2, Node* arg3, Node* arg4)
 {
-	m_nodes.push_back(arg1);
-	m_nodes.push_back(arg2);
-	m_nodes.push_back(arg3);
-	m_nodes.push_back(arg4);
+	m_vertices.push_back(arg1);
+	m_vertices.push_back(arg2);
+	m_vertices.push_back(arg3);
+	m_vertices.push_back(arg4);
 
     for (int i = 0; i < ELEMENT_POINTS; ++i)
-        m_edges.emplace_back(m_nodes[i], m_nodes[(i + 1) % ELEMENT_POINTS]);
+        m_edges.emplace_back(m_vertices.at(i), m_vertices.at((i + 1) % ELEMENT_POINTS), static_cast<EEdgeAligment>(i));
 
 	m_matrixH.resize(ELEMENT_POINTS, std::vector<double>(ELEMENT_POINTS, 0.0));
-    m_boundryConditionH.resize(ELEMENT_POINTS, std::vector<double>(ELEMENT_POINTS, 0.0));
     m_vectorP.resize(ELEMENT_POINTS, 0.0);
     m_matrixC.resize(ELEMENT_POINTS, std::vector<double>(ELEMENT_POINTS, 0.0));
 }
@@ -29,8 +28,9 @@ void Element::CalculateJacobians()
 {
     if (auto universalElement = UniversalElement::Get())
     {
+		m_jacobians.clear();
         for (int i = 0; i < universalElement->GetIntegralPointsNumber(); ++i)
-            m_jacobians.emplace_back(i, *m_nodes[i]);
+            m_jacobians.emplace_back(i, m_vertices);
     }
 }
 
@@ -39,10 +39,11 @@ void Element::CalculateMatrixH(double conductivity)
     if (auto universalElement = UniversalElement::Get())
     {
         std::vector<double> weights = getGaussWeights(universalElement->GetGaussNumber());
-
         int n = universalElement->GetGaussNumber();
         int integralPointIndex = 0;
 
+        m_matrixH.clear();
+        m_matrixH.resize(ELEMENT_POINTS, std::vector<double>(ELEMENT_POINTS, 0.0));
         for (int i = 0; i < n; ++i)
         {
             for (int j = 0; j < n; ++j)
@@ -59,97 +60,59 @@ void Element::CalculateMatrixH(double conductivity)
 	}
 }
 
-void Element::CalculateBoundryConditionsH(std::vector<Node>& nodes, double alfa, double ambientTemp)
+void Element::CalculateBoundryConditionsH(double alfa, double ambientTemp)
 {
-    std::vector<double> gaussNodes = { -sqrt(1.0 / 3.0), sqrt(1.0 / 3.0) };
-    std::vector<double> weights = { 1.0, 1.0 };
-
-    std::vector<std::pair<double, double>> edgePoints = {
-        { gaussNodes.at(0), -1.0 },
-        { gaussNodes.at(1), -1.0 },
-        { 1.0, gaussNodes.at(0) },
-        { 1.0, gaussNodes.at(1) },
-        { gaussNodes.at(1), 1.0 },
-        { gaussNodes.at(0), 1.0 },
-        { -1.0, gaussNodes.at(1) },
-        { -1.0, gaussNodes.at(0) }
-    };
-
-    for (int k = 0; k < ELEMENT_POINTS; ++k)
+    for (auto& edge : m_edges)
     {
-        int nextK = k + 1;
-        if (nextK == ELEMENT_POINTS)
-            nextK = 0;
-
-        if (nodes.at(m_nodesIds[k]).bBoundaryCondition && nodes.at(m_nodesIds[nextK]).bBoundaryCondition)
-        {
-            std::vector<double> firstPointShapeFunctions(4, 0.0);
-            firstPointShapeFunctions.at(k) += shapeFunction(k, edgePoints.at(2 * k).first, edgePoints.at(2 * k).second);
-            firstPointShapeFunctions.at(nextK) += shapeFunction(nextK, edgePoints.at(2 * k).first, edgePoints.at(2 * k).second);
-
-            std::vector<double> secondPointShapeFunctions(4, 0.0);
-            secondPointShapeFunctions.at(k) += shapeFunction(k, edgePoints.at(2 * k + 1).first, edgePoints.at(2 * k + 1).second);
-            secondPointShapeFunctions.at(nextK) += shapeFunction(nextK, edgePoints.at(2 * k + 1).first, edgePoints.at(2 * k + 1).second);
-
-            double detJ = 0.5 * sqrt(
-                pow(nodes.at(m_nodesIds[nextK]).first - nodes.at(m_nodesIds[k]).first, 2) +
-                pow(nodes.at(m_nodesIds[nextK]).second - nodes.at(m_nodesIds[k]).second, 2));
-
-            for (int i = 0; i < ELEMENT_POINTS; ++i)
-            {
-                for (int j = 0; j < ELEMENT_POINTS; ++j)
-                {
-                    m_boundryConditionH[i][j] += firstPointShapeFunctions.at(i) * firstPointShapeFunctions.at(j) * alfa * weights.at(0) * detJ;
-                    m_boundryConditionH[i][j] += secondPointShapeFunctions.at(i) * secondPointShapeFunctions.at(j) * alfa * weights.at(1) * detJ;
-                }
-
-                m_vectorP[i] += firstPointShapeFunctions.at(i) * alfa * weights.at(0) * detJ * ambientTemp;
-                m_vectorP[i] += secondPointShapeFunctions.at(i) * alfa * weights.at(1) * detJ * ambientTemp;
-            }
-        }
+		edge.CalculateMatrixHbcAndVectorP(alfa, ambientTemp);
+        MatrixUtils::AddTo(m_matrixH, edge.m_matrixHbc);
+        MatrixUtils::AddTo(m_vectorP, edge.m_vectorP);
     }
 }
 
 void Element::CalculateMatrixC(double specificHeat, double density)
 {
-    double a = sqrt(1.0 / 3.0);
-    std::vector<std::pair<double, double>> gaussPoints = {
-        { -a, -a },
-        { a, -a },
-        { a, a },
-        { -a, a }
-    };
-
-    // I don't multiply by weights here, because they are all 1.0 for 2 point Gauss quadrature,
-    // but in case of changing number of points, this should be updated
-    for (int i = 0; i < ELEMENT_POINTS; ++i)
+    if (auto universalElement = UniversalElement::Get())
     {
-        for (int j = 0; j < ELEMENT_POINTS; ++j)
-        {
-            for (int k = 0; k < ELEMENT_POINTS; ++k)
-                m_matrixC[i][j] += (shapeFunction(i, gaussPoints.at(k).first, gaussPoints.at(k).second) * shapeFunction(j, gaussPoints.at(k).first, gaussPoints.at(k).second)) * m_jacobians[k].determinant;
+        std::vector<double> weights = getGaussWeights(universalElement->GetGaussNumber());
+        std::vector<double> values = getGaussValues(universalElement->GetGaussNumber());
+        int n = universalElement->GetGaussNumber();
+        int integralPointIndex = 0;
 
-            m_matrixC[i][j] *= specificHeat * density;
+        m_matrixC.clear();
+        m_matrixC.resize(ELEMENT_POINTS, std::vector<double>(ELEMENT_POINTS, 0.0));
+        for (int i = 0; i < n; ++i)
+        {
+            for (int j = 0; j < n; ++j)
+            {
+                std::vector<double> shapeFunctionsValue(ELEMENT_POINTS);
+                for (int k = 0; k < ELEMENT_POINTS; ++k)
+					shapeFunctionsValue.at(k) = (shapeFunction(k, values.at(j), values.at(i)));
+
+                std::vector<std::vector<double>> partOfMatrixC = MatrixUtils::MultiplyVectors(shapeFunctionsValue, shapeFunctionsValue);
+                MatrixUtils::Scale(partOfMatrixC, m_jacobians.at(integralPointIndex).determinant * weights.at(i) * weights.at(j) * specificHeat * density);
+
+                MatrixUtils::AddTo(m_matrixC, partOfMatrixC);
+
+                integralPointIndex++;
+            }
         }
     }
 }
 
 void Element::PrintIds() const
 {
-    for (auto node : m_nodes)
+    for (auto node : m_vertices)
         std::cout << std::setw(2) << node->m_id << " ";
 }
 
 void Element::PrintJacobians() const
 {
-    std::cout << "Element Nodes Ids: ";
-    for (auto node : m_nodes)
+    std::cout << "\nElement Nodes Ids: ";
+    for (auto node : m_vertices)
         std::cout << std::setw(2) << node->m_id << " ";
-    std::cout << "\n\n";
+    std::cout << "\n";
 
-    for (int i = 0; i < sizeof(m_jacobians) / sizeof(Jacobian); ++i)
-    {
-        std::cout << i + 1 << " ";
-        m_jacobians[i].Print();
-    }
+    for (const auto& jacobian : m_jacobians)
+        jacobian.Print();
 }

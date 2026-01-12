@@ -3,7 +3,7 @@
 
 int main()
 {
-	int nGaussPointsNumber = 2;
+	int nGaussPointsNumber = 4;
 
 	//MesSolver solver("Test1_4_4.txt", nGaussPointsNumber);
 	MesSolver solver("Test2_4_4_MixGrid.txt", nGaussPointsNumber);

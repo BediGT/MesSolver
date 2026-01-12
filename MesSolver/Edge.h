@@ -14,15 +14,18 @@ enum EEdgeAligment
 class Edge
 {
 public:
-	Node* m_firstNode = nullptr;
-	Node* m_secondNode = nullptr;
+	Node* m_firstVertice = nullptr;
+	Node* m_secondVertice = nullptr;
 	bool m_bBoundaryCondition = false;
 	EEdgeAligment m_alignment = eBottom;
+
+	std::vector<std::vector<double>> m_matrixHbc{};
+	std::vector<double> m_vectorP{};
 
 	Edge() = default;
 
 	Edge(Node* firstNode, Node* secondNode, EEdgeAligment aligment);
 
-	std::vector<std::vector<double>> GetPartOfHbc() const;
+	void CalculateMatrixHbcAndVectorP(double alfa, double ambientTemp);
 };
 

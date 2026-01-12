@@ -64,6 +64,15 @@ void MatrixUtils::AddTo(std::vector<std::vector<double>>& A, const std::vector<s
             A[i][j] += B[i][j];
 }
 
+void MatrixUtils::AddTo(std::vector<double>& A, const std::vector<double>& B)
+{
+    if (A.size() != B.size())
+        return;
+
+    for (size_t i = 0; i < A.size(); ++i)
+            A[i] += B[i];
+}
+
 std::vector<double> MatrixUtils::Add(
     const std::vector<double>& a,
     const std::vector<double>& b)
@@ -84,6 +93,12 @@ void MatrixUtils::Scale(std::vector<std::vector<double>>& A, double scalar)
     for (size_t i = 0; i < A.size(); ++i)
         for (size_t j = 0; j < A[i].size(); ++j)
             A[i][j] *= scalar;
+}
+
+void MatrixUtils::Scale(std::vector<double>& A, double scalar)
+{
+    for (size_t i = 0; i < A.size(); ++i)
+        A[i] *= scalar;
 }
 
 std::vector<double> MatrixUtils::Multiply(
