@@ -175,7 +175,6 @@ void MesSolver::CalculateSolution()
             for (int j = 0; j < ELEMENT_POINTS; ++j)
             {
                 m_globalH.at(element.m_vertices[i]->m_id).at(element.m_vertices[j]->m_id) += element.m_matrixH[i][j];
-                m_globalH.at(element.m_vertices[i]->m_id).at(element.m_vertices[j]->m_id) += element.m_boundryConditionH[i][j];
                 m_globalC.at(element.m_vertices[i]->m_id).at(element.m_vertices[j]->m_id) += element.m_matrixC[i][j];
             }
 
