@@ -16,9 +16,6 @@ Element::Element(Node* arg1, Node* arg2, Node* arg3, Node* arg4)
 	m_vertices.push_back(arg3);
 	m_vertices.push_back(arg4);
 
-    for (int i = 0; i < ELEMENT_POINTS; ++i)
-        m_edges.emplace_back(m_vertices.at(i), m_vertices.at((i + 1) % ELEMENT_POINTS), static_cast<EEdgeAligment>(i));
-
 	m_matrixH.resize(ELEMENT_POINTS, std::vector<double>(ELEMENT_POINTS, 0.0));
     m_vectorP.resize(ELEMENT_POINTS, 0.0);
     m_matrixC.resize(ELEMENT_POINTS, std::vector<double>(ELEMENT_POINTS, 0.0));
@@ -62,11 +59,17 @@ void Element::CalculateMatrixH(double conductivity)
 
 void Element::CalculateBoundryConditionsH(double alfa, double ambientTemp)
 {
+    for (int i = 0; i < ELEMENT_POINTS; ++i)
+        m_edges.emplace_back(m_vertices.at(i), m_vertices.at((i + 1) % ELEMENT_POINTS), static_cast<EEdgeAligment>(i));
+
     for (auto& edge : m_edges)
     {
-		edge.CalculateMatrixHbcAndVectorP(alfa, ambientTemp);
-        MatrixUtils::AddTo(m_matrixH, edge.m_matrixHbc);
-        MatrixUtils::AddTo(m_vectorP, edge.m_vectorP);
+        if (edge.m_bBoundaryCondition)
+        {
+            edge.CalculateMatrixHbcAndVectorP(alfa, ambientTemp);
+            MatrixUtils::AddTo(m_matrixH, edge.m_matrixHbc);
+            MatrixUtils::AddTo(m_vectorP, edge.m_vectorP);
+        }
     }
 }
 
@@ -113,6 +116,11 @@ void Element::PrintJacobians() const
         std::cout << std::setw(2) << node->m_id << " ";
     std::cout << "\n";
 
+    int i = 0;
     for (const auto& jacobian : m_jacobians)
+    {
+		std::cout << "\nJacobian " << i << ":";
         jacobian.Print();
+        i++;
+    }
 }

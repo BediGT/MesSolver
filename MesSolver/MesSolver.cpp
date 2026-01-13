@@ -45,15 +45,6 @@ MesSolver::MesSolver(const std::string& strFileName, int nGaussPoints)
 
 	LoadData(strFileName);
 
-    m_globalH.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
-
-    for (auto& index : m_boundaryConditions)
-        m_nodes.at(index).m_bBoundaryCondition = true;
-
-    m_globalP.resize(m_nodes.size(), 0.0);
-
-    m_globalC.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
-
     m_nodesTemperatures.resize(m_nodes.size(), 0.0);
 }
 
@@ -142,6 +133,7 @@ void MesSolver::LoadData(const std::string& strFileName)
             while (bcStream >> val)
             {
                 m_boundaryConditions.push_back(val - 1);
+                m_nodes.at(val - 1).m_bBoundaryCondition = true;
             }
             break;
         }
@@ -155,6 +147,15 @@ void MesSolver::LoadData(const std::string& strFileName)
 
 void MesSolver::CalculateSolution()
 {
+	m_globalH.clear();
+    m_globalH.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
+
+	m_globalP.clear();
+    m_globalP.resize(m_nodes.size(), 0.0);
+
+	m_globalC.clear();
+    m_globalC.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
+
     if (auto universalElement = UniversalElement::Get())
         universalElement->Print();
 
@@ -201,7 +202,7 @@ void MesSolver::StartTimeSimulation()
 {
     CalculateSolution();
 
-	std::vector<double> initialTemps(m_nodes.size(), m_globalData.InitialTemp);
+	std::vector<double> temperatures(m_nodes.size(), m_globalData.InitialTemp);
     for (int i = 0; i < m_globalData.SimulationTime; i += m_globalData.SimulationStepTime)
     {
 		double stepTime = static_cast<double>(m_globalData.SimulationStepTime);
@@ -209,12 +210,12 @@ void MesSolver::StartTimeSimulation()
 		std::vector<std::vector<double>> scaledC = m_globalC;
         MatrixUtils::Scale(scaledC, 1.0 / stepTime);
             
-        initialTemps = SolveLinearSystem(MatrixUtils::Add(m_globalH, scaledC), MatrixUtils::Add(m_globalP, MatrixUtils::Multiply(scaledC, initialTemps)));
+        temperatures = SolveLinearSystem(MatrixUtils::Add(m_globalH, scaledC), MatrixUtils::Add(m_globalP, MatrixUtils::Multiply(scaledC, temperatures)));
 
 		std::cout << "\nTime: " << i + m_globalData.SimulationStepTime << " s\n";
-		//printVector(initialTemps);
-        std::cout << "\nMin: " << *std::min_element(initialTemps.begin(), initialTemps.end()) << "\n";
-        std::cout << "\nMax: " << *std::max_element(initialTemps.begin(), initialTemps.end()) << "\n";
+		printVector(temperatures);
+        std::cout << "\nMin: " << *std::min_element(temperatures.begin(), temperatures.end()) << "\n";
+        std::cout << "\nMax: " << *std::max_element(temperatures.begin(), temperatures.end()) << "\n";
         std::cout << "\n\n";
     }
 }
@@ -265,10 +266,13 @@ void MesSolver::PrintData()
 
 void MesSolver::PrintJacobiansForElements()
 {
+    int i = 0;
     for (const auto& element : m_elements)
     {
+		std::cout << "\nElement " << i << ": ";
         element.PrintJacobians();
         std::cout << "\n";
+        i++;
     }
     std::cout << "\n";
 }

@@ -11,7 +11,7 @@ Edge::Edge(Node* firstVertice, Node* secondVertice, EEdgeAligment aligment)
 	m_bBoundaryCondition = m_firstVertice->m_bBoundaryCondition && m_secondVertice->m_bBoundaryCondition;
 
 	m_matrixHbc.resize(ELEMENT_POINTS, std::vector<double>(ELEMENT_POINTS, 0.0));
-	m_vectorP.resize(ELEMENT_POINTS);
+	m_vectorP.resize(ELEMENT_POINTS, 0.0);
 }
 
 void Edge::CalculateMatrixHbcAndVectorP(double alfa, double ambientTemp)
