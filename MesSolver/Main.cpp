@@ -1,17 +1,19 @@
-﻿#include <vector>
-#include "MesSolver.h"
+﻿#include "../MesSolverLib/MesSolver.h"
+#include <vector>
 
 int main()
 {
-	int nGaussPointsNumber = 4;
+	int nGaussPointsNumber = 3;
+	bool bShouldPrint = true;
 
-	MesSolver solver("Test1_4_4.txt", nGaussPointsNumber);
-	//MesSolver solver("Test2_4_4_MixGrid.txt", nGaussPointsNumber);
-	//MesSolver solver("Test3_31_31_kwadrat.txt", nGaussPointsNumber);
+	MesSolver solver(nGaussPointsNumber, bShouldPrint);
+	solver.LoadData("..\\Grids\\Test1_4_4.txt");
+	//solver.LoadData("..\\Grids\\Test2_4_4_MixGrid.txt");
+	//solver.LoadData("..\\Grids\\Test3_31_31_kwadrat.txt");
 
 	//solver.CalculateSolution();
 
-	solver.StartTimeSimulation();
+	solver.SimulateWithTime();
 
     return 0;
 }

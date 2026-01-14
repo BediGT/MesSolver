@@ -32,7 +32,7 @@ Jacobian::Jacobian(int i, const std::vector<Node*>& vertices)
 
 void Jacobian::Print() const
 {
-    std::cout << "\nJacobian Matrix:\n";
+    std::cout << "\nMatrix:\n";
     std::cout << "[" << matrix[0][0] << ", " << matrix[0][1] << "]\n";
     std::cout << "[" << matrix[1][0] << ", " << matrix[1][1] << "]\n";
     std::cout << "Determinant: " << determinant << "\n\n";

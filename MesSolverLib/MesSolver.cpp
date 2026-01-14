@@ -8,58 +8,58 @@
 #include <fstream>
 #include <iostream>
 
-#pragma region static Funtions
-static void printMatrix(const double matrix[4][4])
+#pragma region static print Functions
+static void printMatrix(const double matrix[4][4], std::streamsize precision = PRINT_PRECISION)
 {
     for (int i = 0; i < 4; ++i)
     {
         for (int j = 0; j < 4; ++j) {
-            std::cout << std::setw(10) << matrix[i][j] << " ";
+            std::cout << std::setw(PRINT_WIDTH) << std::right << matrix[i][j] << " ";
         }
         std::cout << "\n";
     }
 }
 
-static void printMatrix(const std::vector<std::vector<double>> matrix)
+static void printMatrix(const std::vector<std::vector<double>> matrix, std::streamsize precision = PRINT_PRECISION)
 {
     for (size_t i = 0; i < matrix.size(); ++i) {
         for (size_t j = 0; j < matrix[i].size(); ++j) {
-            std::cout << std::setw(12) << std::fixed << std::setprecision(6)
-                << matrix[i][j] << " ";
+            std::cout << std::setw(PRINT_WIDTH) << std::fixed << std::setprecision(precision) << std::right << matrix[i][j] << " ";
         }
         std::cout << "\n";
     }
 }
 
-static void printVector(const std::vector<double> vector)
+static void printVector(const std::vector<double> vector, std::streamsize precision = PRINT_PRECISION)
 {
     for (size_t i = 0; i < vector.size(); ++i)
-        std::cout << std::setw(12) << std::fixed << std::setprecision(6) << vector.at(i) << " ";
+        std::cout << std::setw(PRINT_WIDTH) << std::fixed << std::setprecision(precision) << std::right << vector.at(i) << " ";
     std::cout << "\n";
 }
 #pragma endregion
 
-MesSolver::MesSolver(const std::string& strFileName, int nGaussPoints)
+MesSolver::MesSolver(int nGaussPoints, bool bShouldPrint)
+	: m_bShouldPrint(bShouldPrint)
 {
     UniversalElement::Init(nGaussPoints);
-
-	LoadData(strFileName);
-
-    m_nodesTemperatures.resize(m_nodes.size(), 0.0);
 }
 
-void MesSolver::LoadData(const std::string& strFileName)
+bool MesSolver::LoadData(const std::string& strFileName)
 {
     std::ifstream file(strFileName);
     if (!file.is_open())
     {
         std::cerr << "Cannot open file!" << std::endl;
-        return;
+        return false;
     }
 
-    std::string line;
-    Section section = eHeader;
+    m_globalData = GlobalData{};
+	m_nodes.clear();
+	m_elements.clear();
+	m_boundaryConditions.clear();
 
+    std::string line;
+    ESection section = eHeader;
     while (std::getline(file, line))
     {
         if (line.empty()) continue;
@@ -142,10 +142,38 @@ void MesSolver::LoadData(const std::string& strFileName)
 
     file.close();
 
-    PrintData();
+    if (m_bShouldPrint)
+        PrintData();
+
+	return true;
 }
 
-void MesSolver::CalculateSolution()
+void MesSolver::SetShouldPrint(bool bShouldPrint)
+{
+	m_bShouldPrint = bShouldPrint;
+}
+
+void MesSolver::SetGaussNumber(int nGaussPoints)
+{
+	UniversalElement::Init(nGaussPoints);
+}
+
+const std::vector<std::vector<double>>& MesSolver::GetMatrixH()
+{
+	return m_globalH;
+}
+
+const std::vector<double>& MesSolver::GetVectorP()
+{
+	return m_globalP;
+}
+
+const std::vector<std::vector<double>>& MesSolver::GetMatrixC()
+{
+	return m_globalC;
+}
+
+void MesSolver::CalculateTimeIndependentVariables()
 {
 	m_globalH.clear();
     m_globalH.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
@@ -156,9 +184,6 @@ void MesSolver::CalculateSolution()
 	m_globalC.clear();
     m_globalC.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
 
-    if (auto universalElement = UniversalElement::Get())
-        universalElement->Print();
-
     for (auto& element : m_elements)
     {
         element.CalculateJacobians();
@@ -166,8 +191,6 @@ void MesSolver::CalculateSolution()
         element.CalculateBoundryConditionsH(m_globalData.Alfa, m_globalData.AmbientTemperature);
 		element.CalculateMatrixC(m_globalData.SpecificHeat, m_globalData.Density);
     }
-
-    PrintJacobiansForElements();
 
     for (auto& element : m_elements)
     {
@@ -183,49 +206,58 @@ void MesSolver::CalculateSolution()
         }
     }
 
-    m_nodesTemperatures = SolveLinearSystem(m_globalH, m_globalP);
+    if (m_bShouldPrint)
+    {
+        if (auto universalElement = UniversalElement::Get())
+            universalElement->Print();
 
-    std::cout << "\nGlobal Matrix H:\n";
-    printMatrix(m_globalH);
+        std::cout << "\nJacobians:\n";
+        PrintJacobiansForElements();
 
-    std::cout << "\nGlobal Vector P:\n";
-    printVector(m_globalP);
+        std::cout << "\nGlobal Matrix H + Hbc:\n";
+        printMatrix(m_globalH);
 
-    std::cout << "\nNodes Temperatures:\n";
-    printVector(m_nodesTemperatures);
+        std::cout << "\nGlobal Vector P:\n";
+        printVector(m_globalP);
 
-    std::cout << "\nGlobal Matrix C:\n";
-    printMatrix(m_globalC);
+        std::cout << "\nGlobal Matrix C:\n";
+        printMatrix(m_globalC);
+    }
 }
 
-void MesSolver::StartTimeSimulation()
+std::vector<std::vector<double>> MesSolver::SimulateWithTime()
 {
-    CalculateSolution();
+    CalculateTimeIndependentVariables();
 
+    std::vector<std::vector<double>> temperatureHistory{};
 	std::vector<double> temperatures(m_nodes.size(), m_globalData.InitialTemp);
-    for (int i = 0; i < m_globalData.SimulationTime; i += m_globalData.SimulationStepTime)
+    double stepTime = m_globalData.SimulationStepTime;
+    for (double i = 0; i < m_globalData.SimulationTime; i += stepTime)
     {
-		double stepTime = static_cast<double>(m_globalData.SimulationStepTime);
-
 		std::vector<std::vector<double>> scaledC = m_globalC;
         MatrixUtils::Scale(scaledC, 1.0 / stepTime);
             
         temperatures = SolveLinearSystem(MatrixUtils::Add(m_globalH, scaledC), MatrixUtils::Add(m_globalP, MatrixUtils::Multiply(scaledC, temperatures)));
 
-		std::cout << "\nTime: " << i + m_globalData.SimulationStepTime << " s\n";
-		printVector(temperatures);
-        std::cout << "\nMin: " << *std::min_element(temperatures.begin(), temperatures.end()) << "\n";
-        std::cout << "\nMax: " << *std::max_element(temperatures.begin(), temperatures.end()) << "\n";
-        std::cout << "\n\n";
+		temperatureHistory.push_back(temperatures);
+
+        if (m_bShouldPrint)
+        {
+            std::cout << "\nTime: " << std::right << i + m_globalData.SimulationStepTime << " s\n";
+            std::cout << "Temperatures: ";
+            printVector(temperatures);
+            std::cout << "Min: " << std::right << *std::min_element(temperatures.begin(), temperatures.end()) << "\n";
+            std::cout << "Max: " << std::right << *std::max_element(temperatures.begin(), temperatures.end()) << "\n";
+        }
     }
+
+    return temperatureHistory;
 }
 
-#pragma region PrintFunctions
+#pragma region Print Functions
 void MesSolver::PrintData()
 {
-    const int precision = 6;
-
-    std::cout.precision(precision);
+    std::cout.precision(PRINT_PRECISION);
 
     std::cout << "Global Data:\n";
     std::cout << "\tSimulation Time:      " << m_globalData.SimulationTime << " s" << "\n";
@@ -243,8 +275,8 @@ void MesSolver::PrintData()
     for (size_t i = 0; i < m_nodes.size(); ++i)
     {
         std::cout << std::left << "\tID: " << std::setw(2) << i << std::fixed << std::right <<
-            ", x: " << std::setprecision(precision) << std::setw(precision + 3) << m_nodes.at(i).m_x <<
-            ", y: " << std::setprecision(precision) << std::setw(precision + 3) << m_nodes.at(i).m_y << "\n";
+            ", x: " << std::setprecision(PRINT_PRECISION) << std::setw(PRINT_WIDTH) << m_nodes.at(i).m_x <<
+            ", y: " << std::setprecision(PRINT_PRECISION) << std::setw(PRINT_WIDTH) << m_nodes.at(i).m_y << "\n";
     }
 
     std::cout << "\nElements:\n";
