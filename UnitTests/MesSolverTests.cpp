@@ -74,14 +74,14 @@ namespace Tests
 
 			MesSolver solver(2, false);
 			Assert::IsTrue(solver.LoadData("Test1_4_4.txt"));
-			solver.CalculateTimeIndependentVariables();
+			solver.CalculateModel();
 
 			Assert::IsTrue(TestHelpers::AreMatricesEqual(solver.GetMatrixH(), validMatrixHbc, epsilon));
 			Assert::IsTrue(TestHelpers::AreVectorsEqual(solver.GetVectorP(), validVectorP, epsilon));
 			Assert::IsTrue(TestHelpers::AreMatricesEqual(solver.GetMatrixC(), validMatrixC, epsilon));
 
 			std::vector<std::vector<double>> minMaxTemps;
-			std::vector<std::vector<double>> resultTemps = solver.SimulateWithTime();
+			std::vector<std::vector<double>> resultTemps = solver.Simulate();
 			for (const auto& row : resultTemps)
 				minMaxTemps.push_back({ *std::min_element(row.begin(), row.end()), *std::max_element(row.begin(), row.end()) });
 
@@ -153,14 +153,14 @@ namespace Tests
 
 			MesSolver solver(2, false);
 			Assert::IsTrue(solver.LoadData("Test2_4_4_MixGrid.txt"));
-			solver.CalculateTimeIndependentVariables();
+			solver.CalculateModel();
 
 			Assert::IsTrue(TestHelpers::AreMatricesEqual(solver.GetMatrixH(), validMatrixHbc, epsilon));
 			Assert::IsTrue(TestHelpers::AreVectorsEqual(solver.GetVectorP(), validVectorP, epsilon));
 			//Assert::IsTrue(TestHelpers::AreMatricesEqual(solver.GetMatrixC(), validMatrixC, epsilon));
 
 			std::vector<std::vector<double>> minMaxTemps;
-			std::vector<std::vector<double>> resultTemps = solver.SimulateWithTime();
+			std::vector<std::vector<double>> resultTemps = solver.Simulate();
 			for (const auto& row : resultTemps)
 				minMaxTemps.push_back({ *std::min_element(row.begin(), row.end()), *std::max_element(row.begin(), row.end()) });
 

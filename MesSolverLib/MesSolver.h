@@ -49,8 +49,8 @@ public:
     const std::vector<double>& GetVectorP();
     const std::vector<std::vector<double>>& GetMatrixC();
 
-    void CalculateTimeIndependentVariables();
-    std::vector<std::vector<double>> SimulateWithTime();
+    void CalculateModel();
+    std::vector<std::vector<double>> Simulate();
 
     void PrintData();
     void PrintJacobiansForElements();

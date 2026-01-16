@@ -173,7 +173,7 @@ const std::vector<std::vector<double>>& MesSolver::GetMatrixC()
 	return m_globalC;
 }
 
-void MesSolver::CalculateTimeIndependentVariables()
+void MesSolver::CalculateModel()
 {
 	m_globalH.clear();
     m_globalH.resize(m_nodes.size(), std::vector<double>(m_nodes.size(), 0.0));
@@ -225,14 +225,14 @@ void MesSolver::CalculateTimeIndependentVariables()
     }
 }
 
-std::vector<std::vector<double>> MesSolver::SimulateWithTime()
+std::vector<std::vector<double>> MesSolver::Simulate()
 {
-    CalculateTimeIndependentVariables();
+    CalculateModel();
 
     std::vector<std::vector<double>> temperatureHistory{};
 	std::vector<double> temperatures(m_nodes.size(), m_globalData.InitialTemp);
     double stepTime = m_globalData.SimulationStepTime;
-    for (double i = 0; i < m_globalData.SimulationTime; i += stepTime)
+    for (double i = stepTime; i <= m_globalData.SimulationTime; i += stepTime)
     {
 		std::vector<std::vector<double>> scaledC = m_globalC;
         MatrixUtils::Scale(scaledC, 1.0 / stepTime);
@@ -241,14 +241,12 @@ std::vector<std::vector<double>> MesSolver::SimulateWithTime()
 
 		temperatureHistory.push_back(temperatures);
 
+        std::cout << "\nTime: " << std::right << i << " s\n";
+        std::cout << "Temperatures: ";
         if (m_bShouldPrint)
-        {
-            std::cout << "\nTime: " << std::right << i + m_globalData.SimulationStepTime << " s\n";
-            std::cout << "Temperatures: ";
             printVector(temperatures);
-            std::cout << "Min: " << std::right << *std::min_element(temperatures.begin(), temperatures.end()) << "\n";
-            std::cout << "Max: " << std::right << *std::max_element(temperatures.begin(), temperatures.end()) << "\n";
-        }
+        std::cout << "\nMin: " << std::right << *std::min_element(temperatures.begin(), temperatures.end()) << "\n";
+        std::cout << "Max: " << std::right << *std::max_element(temperatures.begin(), temperatures.end()) << "\n";
     }
 
     return temperatureHistory;
