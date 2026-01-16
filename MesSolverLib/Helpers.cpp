@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <cmath>
 
-std::vector<double> solveLinearSystem(std::vector<std::vector<double>> A, std::vector<double> b)
+std::vector<double> SolveLinearSystem(std::vector<std::vector<double>> A, std::vector<double> b)
 {
     int n = (int)A.size();
     if (n == 0 || (int)A[0].size() != n || (int)b.size() != n)
@@ -43,7 +43,7 @@ std::vector<std::vector<double>> MatrixUtils::Add(
     const std::vector<std::vector<double>>& B)
 {
     if (A.size() != B.size() || A[0].size() != B[0].size())
-        throw std::invalid_argument("Macierze musz? mie? ten sam rozmiar");
+        return {};
 
     std::vector<std::vector<double>> C(A.size(), std::vector<double>(A[0].size(), 0.0));
 
@@ -52,6 +52,25 @@ std::vector<std::vector<double>> MatrixUtils::Add(
             C[i][j] = A[i][j] + B[i][j];
 
     return C;
+}
+
+void MatrixUtils::AddTo(std::vector<std::vector<double>>& A, const std::vector<std::vector<double>>& B)
+{
+    if (A.size() != B.size() || A[0].size() != B[0].size())
+        return;
+
+    for (size_t i = 0; i < A.size(); ++i)
+        for (size_t j = 0; j < A[i].size(); ++j)
+            A[i][j] += B[i][j];
+}
+
+void MatrixUtils::AddTo(std::vector<double>& A, const std::vector<double>& B)
+{
+    if (A.size() != B.size())
+        return;
+
+    for (size_t i = 0; i < A.size(); ++i)
+            A[i] += B[i];
 }
 
 std::vector<double> MatrixUtils::Add(
@@ -69,17 +88,17 @@ std::vector<double> MatrixUtils::Add(
     return result;
 }
 
-std::vector<std::vector<double>> MatrixUtils::Scale(
-    const std::vector<std::vector<double>>& A,
-    double scalar)
+void MatrixUtils::Scale(std::vector<std::vector<double>>& A, double scalar)
 {
-    std::vector<std::vector<double>> C(A.size(), std::vector<double>(A[0].size(), 0.0));
-
     for (size_t i = 0; i < A.size(); ++i)
         for (size_t j = 0; j < A[i].size(); ++j)
-            C[i][j] = A[i][j] * scalar;
+            A[i][j] *= scalar;
+}
 
-    return C;
+void MatrixUtils::Scale(std::vector<double>& A, double scalar)
+{
+    for (size_t i = 0; i < A.size(); ++i)
+        A[i] *= scalar;
 }
 
 std::vector<double> MatrixUtils::Multiply(
@@ -113,3 +132,17 @@ std::vector<double> MatrixUtils::Subtract(
     return result;
 }
 
+std::vector<std::vector<double>> MatrixUtils::MultiplyVectors(const std::vector<double>& a, const std::vector<double>& b)
+{
+    std::vector<std::vector<double>> result(a.size(), std::vector<double>(b.size(), 0.0));
+
+    for (size_t i = 0; i < a.size(); ++i)
+    {
+        for (size_t j = 0; j < b.size(); ++j)
+        {
+            result[i][j] = a[i] * b[j];
+        }
+    }
+
+    return result;
+}
