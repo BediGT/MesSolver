@@ -245,8 +245,8 @@ std::vector<std::vector<double>> MesSolver::Simulate()
         std::cout << "Temperatures: ";
         if (m_bShouldPrint)
             printVector(temperatures);
-        std::cout << "\nMin: " << std::right << *std::min_element(temperatures.begin(), temperatures.end()) << "\n";
-        std::cout << "Max: " << std::right << *std::max_element(temperatures.begin(), temperatures.end()) << "\n";
+        std::cout << "\nMin: " << std::right << std::setprecision(PRINT_PRECISION) << *std::min_element(temperatures.begin(), temperatures.end()) << "\n";
+        std::cout << "Max: " << std::right << std::setprecision(PRINT_PRECISION) << *std::max_element(temperatures.begin(), temperatures.end()) << "\n";
     }
 
     return temperatureHistory;
